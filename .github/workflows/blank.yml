@@ -1,42 +1,49 @@
-# This is a basic workflow to help you get started with Actions
-
-name: CI
-
-# Controls when the action will run. 
+name: blank
 on:
-  # Triggers the workflow on push or pull request events but only for the master branch
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
   workflow_dispatch:
     inputs:
-      logLevel:
-        description: 'Log level'     
+      mirrorSourceRepo:
+        description: 'Mirror Source Repository'
         required: true
-        default: 'warning'
-      tags:
-        description: 'Test scenario tags'  
-
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+        default: 'pytorch/pytorch'
+      mirrorDestinationRepo:
+        description: 'Mirror Destination Repository'
+        required: true
+        default: 'Quansight/pytorch-mirror'
+      sinceUpdateHours:
+        description: 'Since Update Hours'
+        required: true
+        default: '5'
+      sinceListHours:
+        description: 'Since Update Hours'
+        required: true
+        default: '4'
+      githubTeam:
+        description: 'Github Team'
+        required: true
+        default: 'pytorch'
+      githubOrg:
+        description: 'Github Organization'
+        required: true
+        default: 'Quansight'
 jobs:
-  # This workflow contains a single job called "build"
-  build:
-    # The type of runner that the job will run on
+  linux:
+    name: Linux
     runs-on: ubuntu-latest
-
-    # Steps represent a sequence of tasks that will be executed as part of the job
+    env:
+      QUANSIGHT_BOT_TOKEN: ${{ secrets.QUANSIGHT_BOT_TOKEN }}
+      GITHUB_ORG: ${{ github.event.inputs.githubOrg }}
+      GITHUB_TEAM: ${{ github.event.inputs.githubTeam }}
+      MIRROR_SOURCE_REPO: ${{ github.event.inputs.mirrorSourceRepo }}
+      MIRROR_DEST_REPO: ${{ github.event.inputs.mirrorDestinationRepo }}
+      SINCE_UPDATE_HOURS: ${{ github.event.inputs.sinceUpdateHours }}  # Hours
+      SINCE_LIST_HOURS: ${{ github.event.inputs.sinceListHours }}    # Hours
+    strategy:
+      fail-fast: false
     steps:
-      # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
-      - uses: actions/checkout@v2
-
-      # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
-
-      # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo "Log level: ${{ github.event.inputs.logLevel }}"
-          echo "Tags: ${{ github.event.inputs.tags }}" 
+      - name: Checkout repository
+        uses: actions/checkout@v2
+      - name: Set up Python
+        uses: actions/setup-python@v1
+        with:
+          python-version: '3.8'
