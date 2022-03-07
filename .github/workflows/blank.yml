@@ -1,43 +1,11 @@
 name: blank
 on:
-  workflow_dispatch:
-    inputs:
-      mirrorSourceRepo:
-        description: 'Mirror Source Repository'
-        required: true
-        default: 'pytorch/pytorch'
-      mirrorDestinationRepo:
-        description: 'Mirror Destination Repository'
-        required: true
-        default: 'Quansight/pytorch-mirror'
-      sinceUpdateHours:
-        description: 'Since Update Hours'
-        required: true
-        default: '5'
-      sinceListHours:
-        description: 'Since Update Hours'
-        required: true
-        default: '4'
-      githubTeam:
-        description: 'Github Team'
-        required: true
-        default: 'pytorch'
-      githubOrg:
-        description: 'Github Organization'
-        required: true
-        default: 'Quansight'
+  push:
+    branches: "*"
 jobs:
   linux:
     name: Linux
-    runs-on: ubuntu-latest
-    env:
-      QUANSIGHT_BOT_TOKEN: ${{ secrets.QUANSIGHT_BOT_TOKEN }}
-      GITHUB_ORG: ${{ github.event.inputs.githubOrg }}
-      GITHUB_TEAM: ${{ github.event.inputs.githubTeam }}
-      MIRROR_SOURCE_REPO: ${{ github.event.inputs.mirrorSourceRepo }}
-      MIRROR_DEST_REPO: ${{ github.event.inputs.mirrorDestinationRepo }}
-      SINCE_UPDATE_HOURS: ${{ github.event.inputs.sinceUpdateHours }}  # Hours
-      SINCE_LIST_HOURS: ${{ github.event.inputs.sinceListHours }}    # Hours
+    runs-on: self-hosted
     strategy:
       fail-fast: false
     steps:
@@ -47,3 +15,6 @@ jobs:
         uses: actions/setup-python@v1
         with:
           python-version: '3.8'
+      - name: run command
+        run: |
+          ls
