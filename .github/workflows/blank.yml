@@ -1,20 +1,28 @@
-name: blank
+name: CI
 on:
   push:
-    branches: "*"
+    branches: [ main ]
 jobs:
-  linux:
-    name: Linux
-    runs-on: self-hosted
+  container-test-job:
     strategy:
-      fail-fast: false
+      matrix:
+        version: [10, 12, 14]
+        os:
+          - ubuntu-latest
+          - macos-latest
+        container_args:
+          - '1'
+          - ''
+    runs-on: ${{ matrix.os }}
+    container:
+      image: node:14.16
+      env:
+        NODE_ENV: development
+      ports:
+        - 80
+      volumes:
+        - my_docker_volume:/volume_mount
+      options: ${{ matrix.container_args }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-      - name: Set up Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: '3.8'
-      - name: run command
-        run: |
-          ls
+      - name: Check for dockerenv file
+        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)
