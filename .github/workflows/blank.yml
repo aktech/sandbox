@@ -3,26 +3,18 @@ on:
   push:
     branches: [ master ]
 jobs:
-  container-test-job:
-    strategy:
-      matrix:
-        version: [10, 12, 14]
-        os:
-          - ubuntu-latest
-          - macos-latest
-        container_args:
-          - '1'
-          - ''
+  test-job:
     runs-on: ${{ matrix.os }}
-    container:
-      image: node:14.16
-      env:
-        NODE_ENV: development
-      ports:
-        - 80
-      volumes:
-        - my_docker_volume:/volume_mount
-      options: ${{ matrix.container_args }}
     steps:
-      - name: Check for dockerenv file
-        run: (ls /.dockerenv && echo Found dockerenv) || (echo No dockerenv)
+      - uses: mamba-org/setup-micromamba@v1
+        with:
+          log-level: debug
+          environment-name: anndatagpu
+          generate-run-shell: true
+          micromamba-version: "1.3.1-0"
+          create-args: >-
+            python=3.10
+            cupy
+        env:
+          ACTIONS_STEP_DEBUG: true
+          CONDA: /home/runnerx/mamba
