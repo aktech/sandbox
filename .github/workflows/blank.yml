@@ -4,17 +4,42 @@ on:
     branches: [ master ]
 jobs:
   test-job:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: mamba-org/setup-micromamba@v1
-        with:
-          log-level: debug
-          environment-name: anndatagpu
-          generate-run-shell: true
-          micromamba-version: "1.3.1-0"
-          create-args: >-
-            python=3.10
-            cupy
-        env:
-          ACTIONS_STEP_DEBUG: true
-          CONDA: /home/runnerx/mamba
+      - uses: actions/checkout@v3
+      - name: Setup Python
+        uses: actions/setup-python@v4.7.0
+
+      - name: Get Hostname
+        shell: bash
+        run: |
+          hostname
+  
+      - name: Run nvidia-smi if present
+        shell: bash
+        run: |
+          nvidia-smi || true
+  
+      - name: Get system Information
+        shell: bash
+        run: |
+          uname -a
+  
+      - name: Get Architecture
+        shell: bash
+        run: |
+          dpkg --print-architecture
+  
+      - name: Get system Disk space
+        shell: bash
+        run: |
+          df -h
+  
+      - name: Get OS version
+        shell: bash
+        run: |
+          cat /etc/*release
+  
+      - name: Run "lscpu"
+        shell: bash
+        run: lscpu      
