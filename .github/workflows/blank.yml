@@ -44,4 +44,4 @@ jobs:
   
       - name: Run "lscpu"
         shell: bash
-        run: lscpu      
+        run: lscpu
