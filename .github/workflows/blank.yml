@@ -45,3 +45,6 @@ jobs:
       - name: Run "lscpu"
         shell: bash
         run: lscpu
+
+      - name: cpuinfo
+        run: cat /proc/cpuinfo
