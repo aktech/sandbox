@@ -2,6 +2,7 @@ name: CI (changed on main)
 on:
   push:
     branches: [ main ]
+  pull_request:
 jobs:
   test-job:
     strategy:
@@ -15,13 +16,12 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v4.7.0
         with:
-          python-version: '3.10' 
+          python-version: '3.10'
 
       - name: Get Hostname
         shell: bash
         run: |
           hostname
-  
       - name: Run nvidia-smi if present
         shell: bash
         run: |
