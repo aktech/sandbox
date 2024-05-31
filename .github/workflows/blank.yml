@@ -7,12 +7,13 @@ jobs:
     strategy:
       matrix:
         version: [1, 2, 3]
-    runs-on: windows-latest-new
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - name: Debugging with tmate
         uses: mxschmitt/action-tmate@v3.17
-            
+      - name: Run
+        run: echo ${{ github.event_name }}
       - name: Setup Python
         uses: actions/setup-python@v4.7.0
         with:
