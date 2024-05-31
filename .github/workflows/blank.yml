@@ -6,12 +6,10 @@ jobs:
   test-job:
     strategy:
       matrix:
-        version: [1, 2, 3]
+        version: [1]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Debugging with tmate
-        uses: mxschmitt/action-tmate@v3.17
       - name: Run
         run: echo ${{ github.event_name }}
       - name: Setup Python
