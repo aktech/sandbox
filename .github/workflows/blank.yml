@@ -21,7 +21,6 @@ jobs:
         shell: bash
         run: |
           hostname
-  
       - name: Run nvidia-smi if present
         shell: bash
         run: |
