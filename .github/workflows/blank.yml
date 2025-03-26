@@ -164,13 +164,6 @@ jobs:
           export PACKER_PLUGIN_PATH="${HOME}/.packer.d/plugins/"
           packer build -var-file=variables.hcl macos-build.pkr.hcl
       
-      - name: Export VM
-        run: |
-          lume export ${{ github.event.inputs.vm_name }} --output=${{ github.event.inputs.vm_name }}.tar.gz
-      
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: macos-image
-          path: ${{ github.event.inputs.vm_name }}.tar.gz
-          retention-days: 5
+      # - name: Export VM
+      #   run: |
+      #     lume export ${{ github.event.inputs.vm_name }} --output=${{ github.event.inputs.vm_name }}.tar.gz
