@@ -31,8 +31,8 @@ on:
 jobs:
   build:
     name: Build macOS Image
-    runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
-    
+    # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
+    runs-on: cirun-runner
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4

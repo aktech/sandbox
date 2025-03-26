@@ -1,0 +1,8 @@
+runners:
+  - name: cirun-macos-runner
+    cloud: on_prem
+    instance_type: 8vcpu-8gb-51gb
+    machine_image: "cirunlabs/macos-sequoia-runner:latest"
+    region: RegionOne
+    labels:
+      - cirun-runner
