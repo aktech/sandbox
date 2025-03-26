@@ -59,7 +59,7 @@ jobs:
           echo "PLUGIN_DIR=$(pwd)" >> $GITHUB_ENV
       
       - name: Build and install packer-plugin-lume
-        working-directory: ${{ env.PLUGIN_DIR }}
+        working-directory: "${{ env.PLUGIN_DIR }}"
         run: make dev
       
       - name: Get IPSW URL and download
@@ -68,37 +68,7 @@ jobs:
           echo "IPSW_PATH=$(pwd)/macOS.ipsw" >> $GITHUB_ENV
       
       - name: Create Variables File
-        run: |
-          # Copy sample variables file from the plugin repository if it exists
-          if [ -f "packer-plugin-lume/bin/variables.hcl" ]; then
-            cp packer-plugin-lume/bin/variables.hcl ./variables.hcl
-            # Update the variables with our custom values
-            sed -i '' "s/^vm_name.*/vm_name     = \"${{ github.event.inputs.vm_name }}\"/g" variables.hcl
-            sed -i '' "s/^cpu_count.*/cpu_count   = ${{ github.event.inputs.cpu_count }}/g" variables.hcl
-            sed -i '' "s/^memory.*/memory      = \"${{ github.event.inputs.memory }}\"/g" variables.hcl
-            sed -i '' "s/^disk_size.*/disk_size   = \"${{ github.event.inputs.disk_size }}\"/g" variables.hcl
-            sed -i '' "s|^ipsw.*|ipsw        = \"$IPSW_PATH\"|g" variables.hcl
-          else
-            # Create variables file from scratch if sample doesn't exist
-            cat > variables.hcl << EOF
-            vm_name     = "${{ github.event.inputs.vm_name }}"
-            cpu_count   = ${{ github.event.inputs.cpu_count }}
-            memory      = "${{ github.event.inputs.memory }}"
-            disk_size   = "${{ github.event.inputs.disk_size }}"
-            ipsw        = "$IPSW_PATH"
-            ssh_username = "admin"
-            ssh_password = "admin"
-            EOF
-          fi
-      
-      - name: Setup variables
-        working-directory: ${{ env.PLUGIN_DIR }}/bin
-        run: |
-          # Edit variables file with the IPSW path
-          sed -i '' "s|^ipsw.*|ipsw        = \"${{ env.IPSW_PATH }}\"|g" variables.hcl
-          
-          # Print the variables file
-          cat variables.hcl
+        run: cp variables.hcl packer-plugin-lume/bin/variables.hcl 
       
       - name: Run Packer build
         working-directory: ${{ env.PLUGIN_DIR }}/bin
