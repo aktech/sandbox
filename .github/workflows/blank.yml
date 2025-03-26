@@ -1,4 +1,4 @@
-name: Build macOS Image with Lume
+name: Lume
 
 on:
   push:
@@ -60,32 +60,19 @@ jobs:
       
       - name: Build and install packer-plugin-lume
         working-directory: ${{ env.PLUGIN_DIR }}
-        run: |
-          # Build and install the plugin properly
-          go build -o packer-plugin-lume
-          
-          # Install the plugin using Packer's plugin installation command
-          packer plugins install --path . "github.com/trycua/lume"
-          
-          # Verify the plugin was installed
-          packer plugins list
+        run: make dev
       
-      - name: Get IPSW URL
-        id: ipsw
+      - name: Get IPSW URL and download
         run: |
-          if [ "${{ github.event.inputs.macos_version }}" = "latest" ]; then
-            IPSW_URL=$(lume ipsw | grep -o 'https://.*ipsw')
-          else
-            IPSW_URL=$(lume ipsw | grep "${{ github.event.inputs.macos_version }}" | grep -o 'https://.*ipsw')
-          fi
-          echo "::set-output name=url::$IPSW_URL"
-          echo "IPSW_URL=$IPSW_URL" >> $GITHUB_ENV
-      
-      - name: Download IPSW
-        run: |
-          echo "Downloading IPSW from $IPSW_URL"
+          # Get the latest macOS IPSW download URL
+          IPSW_URL=$(lume ipsw | head -1 | grep -o 'https://.*ipsw')
+          echo "IPSW URL: $IPSW_URL"
+          
+          # Download the IPSW image
           curl -o macOS.ipsw "$IPSW_URL"
+          
           echo "IPSW_PATH=$(pwd)/macOS.ipsw" >> $GITHUB_ENV
+  
       
       - name: Create Variables File
         run: |
@@ -111,62 +98,16 @@ jobs:
             EOF
           fi
       
-      - name: Setup Packer Template
+      - name: Setup variables
+        working-directory: ${{ env.PLUGIN_DIR }}/bin
         run: |
-          # Use the existing template from the repository if it exists
-          if [ -f "packer-plugin-lume/bin/macOS-15.arm64.lume.prepare-01.pkr.hcl" ]; then
-            cp packer-plugin-lume/bin/macOS-15.arm64.lume.prepare-01.pkr.hcl ./macos-build.pkr.hcl
-          else
-            # Create a basic template if no sample exists
-            cat > macos-build.pkr.hcl << EOF
-            packer {
-              required_plugins {
-                lume = {
-                  version = ">= 0.1.0"
-                  source = "github.com/trycua/lume"
-                }
-              }
-            }
-            
-            source "lume" "macos" {
-              vm_name       = var.vm_name
-              cpu_count     = var.cpu_count
-              memory        = var.memory
-              disk_size     = var.disk_size
-              ipsw          = var.ipsw
-              headless      = true
-              ssh_username  = var.ssh_username
-              ssh_password  = var.ssh_password
-              ssh_timeout   = "30m"
-            }
-            
-            build {
-              sources = ["source.lume.macos"]
-              
-              provisioner "shell" {
-                inline = [
-                  "echo 'macOS build started'",
-                  "sw_vers",
-                  "echo 'Setting up system...'",
-                  "sudo softwareupdate --install-rosetta --agree-to-license",
-                  "echo 'System setup complete'"
-                ]
-              }
-            }
-            EOF
-          fi
+          # Edit variables file with the IPSW path
+          sed -i '' "s|^ipsw.*|ipsw        = \"${{ env.IPSW_PATH }}\"|g" variables.hcl
+          
+          # Print the variables file
+          cat variables.hcl
       
-      - name: Initialize Packer
+      - name: Run Packer build
+        working-directory: ${{ env.PLUGIN_DIR }}/bin
         run: |
-          packer init macos-build.pkr.hcl
-      
-      - name: Build macOS Image
-        run: |
-          export PACKER_PLUGIN_PATH="${HOME}/.packer.d/plugins/"
-          packer build -var-file=variables.hcl macos-build.pkr.hcl
-      - name: Debugging with tmate
-        if: failure()
-        uses: mxschmitt/action-tmate@v3.19      
-      # - name: Export VM
-      #   run: |
-      #     lume export ${{ github.event.inputs.vm_name }} --output=${{ github.event.inputs.vm_name }}.tar.gz
+          packer build -var-file=variables.hcl macOS-15.arm64.lume.prepare-01.pkr.hcl
