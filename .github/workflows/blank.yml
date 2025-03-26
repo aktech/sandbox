@@ -67,9 +67,13 @@ jobs:
           lume ipsw | grep -oE 'https://[^ ]+\.ipsw' | xargs -n1 curl -L -o macOS.ipsw
           echo "IPSW_PATH=$(pwd)/macOS.ipsw" >> $GITHUB_ENV
       
-      - name: Create Variables File
-        run: cp variables.hcl packer-plugin-lume/bin/variables.hcl 
-      
+      - name: Create Variables File and Update IPSW Path
+        run: |
+          cp variables.hcl packer-plugin-lume/bin/variables.hcl
+          sed -i.bak "s|^ipsw *=.*|ipsw = \"${IPSW_PATH}\"|" packer-plugin-lume/bin/variables.hcl
+        env:
+          IPSW_PATH: ${{ env.IPSW_PATH }}      
+
       - name: Run Packer build
         working-directory: ${{ env.PLUGIN_DIR }}/bin
         run: |
