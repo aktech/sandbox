@@ -1,70 +1,176 @@
-name: CI (changed on main)
+name: Build macOS Image with Lume
+
 on:
   push:
     branches: [ main ]
   pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      macos_version:
+        description: 'macOS version to build (latest, 14.0, etc.)'
+        required: true
+        default: 'latest'
+      cpu_count:
+        description: 'Number of CPU cores'
+        required: true
+        default: '4'
+      memory:
+        description: 'Memory size'
+        required: true
+        default: '4GB'
+      disk_size:
+        description: 'Disk size'
+        required: true
+        default: '40GB'
+      vm_name:
+        description: 'VM name'
+        required: true
+        default: 'macos-builder'
+
 jobs:
-  test-job:
-    strategy:
-      matrix:
-        version: [1]
-    runs-on: ubuntu-latest
+  build:
+    name: Build macOS Image
+    runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
+    
     steps:
-      - uses: actions/checkout@v3
-      - name: frp-tunnel-action
-        uses: cirunlabs/frp-tunnel-action@1.0
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
-          timeout_minutes: 1
-          frp_server: frp-github-actions.iakte.ch
-          frp_server_port: 7000
-          protocol: 'tcp'
-          frp_token: ${{ secrets.FRP_TOKEN }}
-          local_ip: '127.0.0.1'
-          local_port: 22
-          remote_port: 6000
-          frp_version: '0.61.1'
-
-      - name: Run
+          go-version: '1.21'
+      
+      - name: Install Packer
         run: |
-          echo ${{ github.event_name }}
-          echo ${{ github.ref_name }}
-      - name: Setup Python
-        uses: actions/setup-python@v4.7.0
+          brew tap hashicorp/tap
+          brew install hashicorp/tap/packer
+          packer --version
+      
+      - name: Install Lume
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/lume/scripts/install.sh)"
+          echo "${HOME}/.lume/bin" >> $GITHUB_PATH
+      
+      - name: Clone and Build Lume Packer Plugin
+        run: |
+          # Clone the packer-plugin-lume repository
+          git clone https://github.com/trycua/packer-plugin-lume.git
+          cd packer-plugin-lume
+          
+          # Build the plugin
+          make dev
+          
+          # Make sure plugin is installed in the right location
+          mkdir -p ~/.packer.d/plugins/
+          cp bin/packer-plugin-lume ~/.packer.d/plugins/
+          
+          # Return to the original directory
+          cd ..
+      
+      - name: Get IPSW URL
+        id: ipsw
+        run: |
+          if [ "${{ github.event.inputs.macos_version }}" = "latest" ]; then
+            IPSW_URL=$(lume ipsw | grep -o 'https://.*ipsw')
+          else
+            IPSW_URL=$(lume ipsw | grep "${{ github.event.inputs.macos_version }}" | grep -o 'https://.*ipsw')
+          fi
+          echo "::set-output name=url::$IPSW_URL"
+          echo "IPSW_URL=$IPSW_URL" >> $GITHUB_ENV
+      
+      - name: Download IPSW
+        run: |
+          echo "Downloading IPSW from $IPSW_URL"
+          curl -o macOS.ipsw "$IPSW_URL"
+          echo "IPSW_PATH=$(pwd)/macOS.ipsw" >> $GITHUB_ENV
+      
+      - name: Create Variables File
+        run: |
+          # Copy sample variables file from the plugin repository if it exists
+          if [ -f "packer-plugin-lume/bin/variables.hcl" ]; then
+            cp packer-plugin-lume/bin/variables.hcl ./variables.hcl
+            # Update the variables with our custom values
+            sed -i '' "s/^vm_name.*/vm_name     = \"${{ github.event.inputs.vm_name }}\"/g" variables.hcl
+            sed -i '' "s/^cpu_count.*/cpu_count   = ${{ github.event.inputs.cpu_count }}/g" variables.hcl
+            sed -i '' "s/^memory.*/memory      = \"${{ github.event.inputs.memory }}\"/g" variables.hcl
+            sed -i '' "s/^disk_size.*/disk_size   = \"${{ github.event.inputs.disk_size }}\"/g" variables.hcl
+            sed -i '' "s|^ipsw.*|ipsw        = \"$IPSW_PATH\"|g" variables.hcl
+          else
+            # Create variables file from scratch if sample doesn't exist
+            cat > variables.hcl << EOF
+            vm_name     = "${{ github.event.inputs.vm_name }}"
+            cpu_count   = ${{ github.event.inputs.cpu_count }}
+            memory      = "${{ github.event.inputs.memory }}"
+            disk_size   = "${{ github.event.inputs.disk_size }}"
+            ipsw        = "$IPSW_PATH"
+            ssh_username = "admin"
+            ssh_password = "admin"
+            EOF
+          fi
+      
+      - name: Setup Packer Template
+        run: |
+          # Use the existing template from the repository if it exists
+          if [ -f "packer-plugin-lume/bin/macOS-15.arm64.lume.prepare-01.pkr.hcl" ]; then
+            cp packer-plugin-lume/bin/macOS-15.arm64.lume.prepare-01.pkr.hcl ./macos-build.pkr.hcl
+          else
+            # Create a basic template if no sample exists
+            cat > macos-build.pkr.hcl << EOF
+            packer {
+              required_plugins {
+                lume = {
+                  version = ">= 0.1.0"
+                  source = "github.com/trycua/lume"
+                }
+              }
+            }
+            
+            source "lume" "macos" {
+              vm_name       = var.vm_name
+              cpu_count     = var.cpu_count
+              memory        = var.memory
+              disk_size     = var.disk_size
+              ipsw          = var.ipsw
+              headless      = true
+              ssh_username  = var.ssh_username
+              ssh_password  = var.ssh_password
+              ssh_timeout   = "30m"
+            }
+            
+            build {
+              sources = ["source.lume.macos"]
+              
+              provisioner "shell" {
+                inline = [
+                  "echo 'macOS build started'",
+                  "sw_vers",
+                  "echo 'Setting up system...'",
+                  "sudo softwareupdate --install-rosetta --agree-to-license",
+                  "echo 'System setup complete'"
+                ]
+              }
+            }
+            EOF
+          fi
+      
+      - name: Initialize Packer
+        run: |
+          packer init macos-build.pkr.hcl
+      
+      - name: Build macOS Image
+        run: |
+          export PACKER_PLUGIN_PATH="${HOME}/.packer.d/plugins/"
+          packer build -var-file=variables.hcl macos-build.pkr.hcl
+      
+      - name: Export VM
+        run: |
+          lume export ${{ github.event.inputs.vm_name }} --output=${{ github.event.inputs.vm_name }}.tar.gz
+      
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v3
         with:
-          python-version: '3.10'
-
-      # - name: Get Hostname
-      #   shell: bash
-      #   run: |
-      #     hostname
-      # - name: Run nvidia-smi if present
-      #   shell: bash
-      #   run: |
-      #     nvidia-smi || true
-  
-      # - name: Get system Information
-      #   shell: bash
-      #   run: |
-      #     uname -a
-  
-      # - name: Get Architecture
-      #   shell: bash
-      #   run: |
-      #     dpkg --print-architecture
-  
-      # - name: Get system Disk space
-      #   shell: bash
-      #   run: |
-      #     df -h
-  
-      # - name: Get OS version
-      #   shell: bash
-      #   run: |
-      #     cat /etc/*release
-  
-      # - name: Run "lscpu"
-      #   shell: bash
-      #   run: lscpu
-
-      - name: cpuinfo
-        run: cat /proc/cpuinfo
+          name: macos-image
+          path: ${{ github.event.inputs.vm_name }}.tar.gz
+          retention-days: 5
