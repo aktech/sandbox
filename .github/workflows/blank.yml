@@ -52,21 +52,23 @@ jobs:
         run: |
           brew install lume
       
-      - name: Clone and Build Lume Packer Plugin
+      - name: Clone packer-plugin-lume repository
         run: |
-          # Clone the packer-plugin-lume repository
           git clone https://github.com/trycua/packer-plugin-lume.git
           cd packer-plugin-lume
+          echo "PLUGIN_DIR=$(pwd)" >> $GITHUB_ENV
+      
+      - name: Build and install packer-plugin-lume
+        working-directory: ${{ env.PLUGIN_DIR }}
+        run: |
+          # Build and install the plugin properly
+          go build -o packer-plugin-lume
           
-          # Build the plugin
-          make dev
+          # Install the plugin using Packer's plugin installation command
+          packer plugins install --path . "github.com/trycua/lume"
           
-          # Make sure plugin is installed in the right location
-          mkdir -p ~/.packer.d/plugins/
-          cp bin/packer-plugin-lume ~/.packer.d/plugins/
-          
-          # Return to the original directory
-          cd ..
+          # Verify the plugin was installed
+          packer plugins list
       
       - name: Get IPSW URL
         id: ipsw
@@ -162,7 +164,9 @@ jobs:
         run: |
           export PACKER_PLUGIN_PATH="${HOME}/.packer.d/plugins/"
           packer build -var-file=variables.hcl macos-build.pkr.hcl
-      
+      - name: Debugging with tmate
+        if: failure()
+        uses: mxschmitt/action-tmate@v3.19      
       # - name: Export VM
       #   run: |
       #     lume export ${{ github.event.inputs.vm_name }} --output=${{ github.event.inputs.vm_name }}.tar.gz
