@@ -50,8 +50,7 @@ jobs:
       
       - name: Install Lume
         run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/trycua/cua/main/libs/lume/scripts/install.sh)"
-          echo "${HOME}/.lume/bin" >> $GITHUB_PATH
+          brew install lume
       
       - name: Clone and Build Lume Packer Plugin
         run: |
