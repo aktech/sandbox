@@ -64,7 +64,7 @@ jobs:
       
       - name: Get IPSW URL and download
         run: |
-          lume ipsw | grep -oE 'https://[^ ]+\.ipsw' | xargs -n1 curl -L -o macos.ipsw
+          lume ipsw | grep -oE 'https://[^ ]+\.ipsw' | xargs -n1 curl -L -o macOS.ipsw
           echo "IPSW_PATH=$(pwd)/macOS.ipsw" >> $GITHUB_ENV
       
       - name: Create Variables File
