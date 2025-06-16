@@ -5,92 +5,26 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
-    inputs:
-      macos_version:
-        description: 'macOS version to build (latest, 14.0, etc.)'
-        required: true
-        default: 'latest'
-      cpu_count:
-        description: 'Number of CPU cores'
-        required: true
-        default: '4'
-      memory:
-        description: 'Memory size'
-        required: true
-        default: '4GB'
-      disk_size:
-        description: 'Disk size'
-        required: true
-        default: '40GB'
-      vm_name:
-        description: 'VM name'
-        required: true
-        default: 'macos-builder'
 
 jobs:
   build:
-    name: Build macOS Image
+    name: build
+    # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+  build2:
+    name: build2
     # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
     runs-on: foobar
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Set up Go
-        uses: actions/setup-go@v5
-        with:
-          go-version: '1.21'
-      
-      - name: Install Homebrew if needed
-        run: |
-          if ! command -v brew &> /dev/null; then
-            echo "Homebrew not found. Installing..."
-            /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-            
-            # Add Homebrew to PATH
-            echo 'eval "$(/opt/homebrew/bin/brew shellenv)"' >> ~/.zprofile
-            eval "$(/opt/homebrew/bin/brew shellenv)"
-            
-            # For GitHub Actions environment
-            echo "PATH=$PATH" >> $GITHUB_ENV
-          else
-            echo "Homebrew already installed"
-          fi
-      
-      - name: Install Packer
-        run: |
-          brew tap hashicorp/tap
-          brew install hashicorp/tap/packer
-          packer --version
-      
-      - name: Install Lume
-        run: |
-          brew install lume
-      
-      - name: Clone packer-plugin-lume repository
-        run: |
-          git clone https://github.com/trycua/packer-plugin-lume.git
-          cd packer-plugin-lume
-          echo "PLUGIN_DIR=$(pwd)" >> $GITHUB_ENV
-      
-      - name: Build and install packer-plugin-lume
-        working-directory: "${{ env.PLUGIN_DIR }}"
-        run: make dev
-      
-      - name: Get IPSW URL and download
-        run: |
-          lume ipsw | grep -oE 'https://[^ ]+\.ipsw' | xargs -n1 curl -L -o macOS.ipsw
-          echo "IPSW_PATH=$(pwd)/macOS.ipsw" >> $GITHUB_ENV
-      
-      - name: Create Variables File and Update IPSW Path
-        run: |
-          cp variables.hcl packer-plugin-lume/bin/variables.hcl
-          sed -i.bak "s|^ipsw *=.*|ipsw = \"${IPSW_PATH}\"|" packer-plugin-lume/bin/variables.hcl
-        env:
-          IPSW_PATH: ${{ env.IPSW_PATH }}      
-
-      - name: Run Packer build
-        working-directory: ${{ env.PLUGIN_DIR }}/bin
-        run: |
-          packer build -var-file=variables.hcl macOS-15.arm64.lume.prepare-01.pkr.hcl
+  build3:
+    name: build3
+    # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
+    runs-on: foobar
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4             
