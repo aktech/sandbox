@@ -14,17 +14,20 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-  build2:
-    name: build2
-    # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
-    runs-on: foobar
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-  build3:
-    name: build3
-    # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
-    runs-on: foobar
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4             
+
+      - name: Debugging with tmate
+        uses: mxschmitt/action-tmate@v3.22        
+  # build2:
+  #   name: build2
+  #   # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
+  #   runs-on: foobar
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4
+  # build3:
+  #   name: build3
+  #   # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
+  #   runs-on: foobar
+  #   steps:
+  #     - name: Checkout repository
+  #       uses: actions/checkout@v4             
