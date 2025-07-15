@@ -10,13 +10,15 @@ jobs:
   build:
     name: build
     # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
-    runs-on: ubuntu-latest
+    runs-on: cirun-test-label
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Debugging with tmate
-        uses: mxschmitt/action-tmate@v3.22        
+      - name: hello
+        run: pwd
+      - name: cat
+        run: cat .cirun.yml  
   # build2:
   #   name: build2
   #   # runs-on: macos-14 # Ensures we're using a macOS runner with Apple Silicon
